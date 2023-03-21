@@ -1,0 +1,38 @@
+{
+  "name": "serverless-watch",
+  "version": "0.1.0",
+  "description": "Track changes in your lambda in real time, using Serverless Framework.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "cd ./example && sls watch --stage dev"
+  },
+  "author": {
+    "name": "Marcos Viana",
+    "email": "marcosvianacdc@gmail.com"
+  },
+  "homepage": "https://github.com/Maarcosv99/serverless-watch",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Maarcosv99/serverless-watch"
+  },
+  "bugs": {
+    "url": "https://github.com/Maarcosv99/serverless-watch/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "serverless",
+    "watch",
+    "lambda",
+    "serverless-watch",
+    "aws-lambda",
+    "serverless-framework"
+  ],
+  "devDependencies": {
+    "@serverless/utils": "^6.9.2",
+    "chokidar": "^3.5.3",
+    "clear": "^0.1.0",
+    "no-console": "^2.0.0",
+    "ora": "^6.2.0"
+  }
+}
