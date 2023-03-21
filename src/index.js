@@ -72,7 +72,7 @@ class ServerlessWatchPlugin {
             this.watchFunctions.push(fn)
             this.watchPaths.push(this.getPathFromFunction(fn))
         }
-    
+
         if (this.cliOptions.config) {
             this.watchPaths.push(this.cliOptions.config)
         } else {
@@ -103,7 +103,6 @@ class ServerlessWatchPlugin {
     getPathFromFunction(func) {
         const functions = this.serverless.configurationInput.functions
         let handlerPath = functions[func].handler.split('.')[0]
-        handlerPath = handlerPath.substring(0, handlerPath.lastIndexOf('/') + 1)
         return this.serviceDir + '/' + handlerPath
     }
 
@@ -111,7 +110,8 @@ class ServerlessWatchPlugin {
         const functions = this.serverless.configurationInput.functions
 
         for (const func of Object.keys(functions)) {
-            if (path.includes(this.getPathFromFunction(func))) {
+            const funcPath = functions[func].handler.split('.')[0]
+            if (path.includes(funcPath)) {
                 return func
             }
         }
@@ -186,6 +186,8 @@ class ServerlessWatchPlugin {
     async start() {
         clear()
         this.cliInterface.spinner.start()
+
+        console.log(this.watchPaths)
 
         watch(this.watchPaths).on('change', async (path) => {
             await this.updateService(path)
