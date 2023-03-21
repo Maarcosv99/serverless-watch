@@ -7,8 +7,6 @@ import ora from 'ora';
 
 class ServerlessWatchPlugin {
     constructor(serverless, cliOptions, { log }) {
-        //clear()
-
         this.log = log
         this.cliOptions = cliOptions
         this.serverless = serverless
@@ -137,7 +135,9 @@ class ServerlessWatchPlugin {
             const functionToDeploy = this.getFunctionByPath(path)
 
             // Set the option function to deploy
+            this.cliOptions['force'] = true
             this.cliOptions['function'] = functionToDeploy
+            this.cliOptions['update-config'] = false
             
             cliSpinner.succeed(`Deploying function ${functionToDeploy}. See logs for details`)
             await this.serverless.pluginManager.spawn('deploy:function')
@@ -150,7 +150,7 @@ class ServerlessWatchPlugin {
         const cliSpinner = this.cliInterface.spinner
         cliSpinner.succeed('Deploying service. See logs for details')
 
-        const cmdArray = ['deploy', ...this.slsOptions]
+        const cmdArray = ['deploy', '--force', ...this.slsOptions]
         childProcess.execFileSync('serverless', cmdArray, { stdio: 'inherit' })
     }
 
@@ -164,6 +164,8 @@ class ServerlessWatchPlugin {
         for (const func of Object.keys(functions)) {
             functionsToDeploy.push(async () => {
                 this.cliOptions['function'] = func
+                this.cliOptions['force'] = true
+                this.cliOptions['update-config'] = false
                 await this.serverless.pluginManager.spawn('deploy:function')
             })
         }
