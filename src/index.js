@@ -187,8 +187,6 @@ class ServerlessWatchPlugin {
         clear()
         this.cliInterface.spinner.start()
 
-        console.log(this.watchPaths)
-
         watch(this.watchPaths).on('change', async (path) => {
             await this.updateService(path)
             await this.setCli()
