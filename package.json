@@ -29,10 +29,8 @@
     "serverless-framework"
   ],
   "devDependencies": {
-    "@serverless/utils": "^6.9.2",
     "chokidar": "^3.5.3",
     "clear": "^0.1.0",
-    "no-console": "^2.0.0",
     "ora": "^6.2.0"
   }
 }
