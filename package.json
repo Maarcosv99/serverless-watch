@@ -1,6 +1,6 @@
 {
   "name": "serverless-watch",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Track changes in your lambda in real time, using Serverless Framework.",
   "main": "index.js",
   "type": "module",
