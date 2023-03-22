@@ -1,22 +1,18 @@
 'use strict';
 
-import childProcess from 'node:child_process'
-import clear from 'clear'
+import { execFileSync } from 'node:child_process'
 import { watch } from 'chokidar';
 import ora from 'ora';
 
+const clear = () => execFileSync('clear', { stdio: 'inherit' })
+
 class ServerlessWatchPlugin {
-    constructor(serverless, cliOptions, { log }) {
-        this.log = log
+    constructor(serverless, cliOptions) {
         this.cliOptions = cliOptions
         this.serverless = serverless
-        this.serverless.cli['log'] = () => {}
-        this.serviceDir = serverless.config.serviceDir
 
         this.watchPaths = []
-        this.watchFunctions = []
-        this.slsOptions = []
-
+        this.deployOptions = []
         this.cliInterface = {
             spinner: ora({
                 text: 'Watching for changes',
@@ -55,125 +51,125 @@ class ServerlessWatchPlugin {
         }
     }
 
-    setupWatch() {
-        const functions = this.serverless.configurationInput.functions
-        
-        if (!this.cliOptions['function']) {
-            for (const func of Object.keys(functions)) {
-                this.watchFunctions.push(func)
-                this.watchPaths.push(this.getPathFromFunction(func)) 
-            }
-        }
-    
-        if (this.cliOptions['function']) {
-            const fn = this.cliOptions['function']
-            if (!functions[fn])  throw new Error(`Function ${fn} not found`);
-    
-            this.watchFunctions.push(fn)
-            this.watchPaths.push(this.getPathFromFunction(fn))
-        }
-
-        if (this.cliOptions.config) {
-            this.watchPaths.push(this.cliOptions.config)
-        } else {
-            this.watchPaths.push(`${this.serviceDir}/${this.serverless.configurationFilename}`)
-        }
-    
-        if (this.serverless.service.custom.serverlessWatch.includes) {
-            this.watchPaths = [
-                ...this.watchPaths, 
-                ...this.serverless.service.custom.serverlessWatch.includes
-            ]
-        }
-    }
-
-    setupServerlessOptions() {
-        for (const command of Object.keys(this.cliOptions)) {
-            if (['stage', 'config', 'function', 'verbose'].includes(command)) {
-                this.slsOptions.push(`--${command}`, this.cliOptions[command])
-            }
-        }
-    }
-
-    init() {
-        this.setupWatch()
-        this.setupServerlessOptions()
-    }
-
     getPathFromFunction(func) {
-        const functions = this.serverless.configurationInput.functions
+        const { functions } = this.serverless.configurationInput
+        const { serviceDir } = this.serverless.config
         let handlerPath = functions[func].handler.split('.')[0]
-        return this.serviceDir + '/' + handlerPath
+        return serviceDir + '/' + handlerPath
     }
 
     getFunctionByPath(path) {
-        const functions = this.serverless.configurationInput.functions
-
+        const { functions } = this.serverless.configurationInput
         for (const func of Object.keys(functions)) {
             const funcPath = functions[func].handler.split('.')[0]
             if (path.includes(funcPath)) {
                 return func
             }
         }
-        
         return null
     }
 
-    async setCli() {
-        clear()
+    setupWatchAllFunctions() {
+        if (!this.cliOptions['function']) {
+            const { functions } = this.serverless.configurationInput
+            for (const func of Object.keys(functions)) {
+                this.watchPaths.push(this.getPathFromFunction(func)) 
+            }
+        }
+    }
 
-        const cliSpinner = this.cliInterface.spinner
-        cliSpinner.text = 'Watching for changes'
-        cliSpinner.color = 'yellow'
-        cliSpinner.start()
+    setupWatchSingleFunction() {
+        if (this.cliOptions['function']) {
+            const fn = this.cliOptions['function']
+            const { functions } = this.serverless.configurationInput
+            if (!functions[fn])  throw new Error(`Function ${fn} not found`);
+            this.watchPaths.push(this.getPathFromFunction(fn))
+        }
+    }
+
+    setupWatchServerlessConfig() {
+        const { serviceDir } = this.serverless.config
+        const { configurationFilename } = this.serverless
+
+        if (this.cliOptions.config) {
+            this.watchPaths.push(this.cliOptions.config)
+        } else {
+            this.watchPaths.push(`${serviceDir}/${configurationFilename}`)
+        }
+    }
+
+    setupWatchCustomConfig() {
+        const { serverlessWatch } = this.serverless.service.custom
+        if (serverlessWatch && serverlessWatch.includes) {
+            this.watchPaths = [...this.watchPaths, ...serverlessWatch.includes]
+        }
+    }
+
+    setupWatch() {
+        this.setupWatchAllFunctions()
+        this.setupWatchAllFunctions()
+        this.setupWatchSingleFunction()
+        this.setupWatchServerlessConfig()
+        this.setupWatchCustomConfig()
+    }
+
+    setupDeployOptions() {
+        this.deployOptions = Object.entries(this.cliOptions).reduce((options, command) => {
+            options.push(`--${command[0]}`, command[1])
+            return options
+        }, [])
+    }
+
+    init() {
+        this.setupWatch()
+        this.setupDeployOptions()
+    }
+
+    setCli() {
+        clear()
+        const { spinner } = this.cliInterface
+        spinner.text = 'Watching for changes'
+        spinner.color = 'yellow'
+        spinner.start()
+    }
+    
+    async spawnDeployFunction(fn_to_deploy) {
+        // Set cli options to deploy function
+        this.cliOptions['force'] = true
+        this.cliOptions['update-config'] = false
+        this.cliOptions['function'] = fn_to_deploy
+
+        await this.serverless.pluginManager.spawn('deploy:function')
+    }
+
+    spawnDeployService() {
+        const cmdArray = ['deploy', '--force', ...this.deployOptions]
+        execFileSync('serverless', cmdArray, { stdio: 'inherit' })
     }
 
     async deployFunction(path) {
-        const cliSpinner = this.cliInterface.spinner
+        const { spinner } = this.cliInterface
+        const functionToDeploy = this.getFunctionByPath(path)
+        spinner.succeed(`Deploying function ${functionToDeploy}. See logs for details`)
+        await this.spawnDeployFunction(functionToDeploy)
+    }
 
-        try {
-            const functionToDeploy = this.getFunctionByPath(path)
-
-            // Set the option function to deploy
-            this.cliOptions['force'] = true
-            this.cliOptions['function'] = functionToDeploy
-            this.cliOptions['update-config'] = false
-            
-            cliSpinner.succeed(`Deploying function ${functionToDeploy}. See logs for details`)
-            await this.serverless.pluginManager.spawn('deploy:function')
-        } catch (e) {
-            this.log.error(e.message)
+    async deployAllFunctions() {
+        const { spinner } = this.cliInterface
+        spinner.succeed('Deploying all functions. See logs for details')
+        const { functions } = this.serverless.configurationInput
+        for (const func of Object.keys(functions)) {
+            await this.spawnDeployFunction(func)
         }
     }
 
     deployService() {
-        const cliSpinner = this.cliInterface.spinner
-        cliSpinner.succeed('Deploying service. See logs for details')
-
-        const cmdArray = ['deploy', '--force', ...this.slsOptions]
-        childProcess.execFileSync('serverless', cmdArray, { stdio: 'inherit' })
+        const { spinner } = this.cliInterface
+        spinner.succeed('Deploying service. See logs for details')
+        this.spawnDeployService()
     }
 
-    async deployAllFunctions() {
-        const cliSpinner = this.cliInterface.spinner
-        cliSpinner.succeed('Deploying all functions. See logs for details')
-
-        const functions = this.serverless.configurationInput.functions
-        const functionsToDeploy = []
-
-        for (const func of Object.keys(functions)) {
-            functionsToDeploy.push(async () => {
-                this.cliOptions['function'] = func
-                this.cliOptions['force'] = true
-                this.cliOptions['update-config'] = false
-                await this.serverless.pluginManager.spawn('deploy:function')
-            })
-        }
-
-        await Promise.all(functionsToDeploy.map((func) => func()))
-    }
-
-    async updateService(path) {
+    async deployManager(path) {
         if (this.getFunctionByPath(path)) {
             await this.deployFunction(path)
         } else if (path.includes(this.serverless.configurationFilename)) {
@@ -184,12 +180,10 @@ class ServerlessWatchPlugin {
     }
 
     async start() {
-        clear()
-        this.cliInterface.spinner.start()
-
+        this.setCli()
         watch(this.watchPaths).on('change', async (path) => {
-            await this.updateService(path)
-            await this.setCli()
+            await this.deployManager(path)
+            this.setCli()
         })
     }
 }
