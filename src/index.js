@@ -60,10 +60,10 @@ class ServerlessWatchPlugin {
 
     getFunctionByPath(path) {
         const { functions } = this.serverless.configurationInput
-        const fn = Object.values(functions).find(fn => {
-            path.includes(fn.handler.split('.')[0])
+        const fn = Object.entries(functions).find(([_, { handler }]) => {
+            return path.includes(handler.split('.')[0])
         })
-        return fn || null
+        return fn ? fn[0] : null
     }
 
     setupWatchAllFunctions() {
@@ -103,7 +103,6 @@ class ServerlessWatchPlugin {
     }
 
     setupWatch() {
-        this.setupWatchAllFunctions()
         this.setupWatchAllFunctions()
         this.setupWatchSingleFunction()
         this.setupWatchServerlessConfig()
@@ -155,9 +154,9 @@ class ServerlessWatchPlugin {
         const { spinner } = this.cliInterface
         spinner.succeed('Deploying all functions. See logs for details')
         const { functions } = this.serverless.configurationInput
-        Object.keys(functions).forEach(async func => {
+        for (const func of Object.keys(functions)) {
             await this.spawnDeployFunction(func)
-        })
+        }
     }
 
     deployService() {
