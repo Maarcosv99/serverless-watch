@@ -30,7 +30,6 @@
   ],
   "devDependencies": {
     "chokidar": "^3.5.3",
-    "clear": "^0.1.0",
     "ora": "^6.2.0"
   }
 }
