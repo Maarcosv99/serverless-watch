@@ -51,30 +51,27 @@ class ServerlessWatchPlugin {
         }
     }
 
-    getPathFromFunction(func) {
+    getPathFromFunction(funcName) {
         const { functions } = this.serverless.configurationInput
         const { serviceDir } = this.serverless.config
-        let handlerPath = functions[func].handler.split('.')[0]
-        return serviceDir + '/' + handlerPath
+        let handlerPath = functions[funcName].handler.split('.')[0]
+        return serviceDir + '/' + handlerPath 
     }
 
     getFunctionByPath(path) {
         const { functions } = this.serverless.configurationInput
-        for (const func of Object.keys(functions)) {
-            const funcPath = functions[func].handler.split('.')[0]
-            if (path.includes(funcPath)) {
-                return func
-            }
-        }
-        return null
+        const fn = Object.values(functions).find(fn => {
+            path.includes(fn.handler.split('.')[0])
+        })
+        return fn || null
     }
 
     setupWatchAllFunctions() {
         if (!this.cliOptions['function']) {
             const { functions } = this.serverless.configurationInput
-            for (const func of Object.keys(functions)) {
+            Object.keys(functions).forEach(func => {
                 this.watchPaths.push(this.getPathFromFunction(func)) 
-            }
+            })
         }
     }
 
@@ -158,9 +155,9 @@ class ServerlessWatchPlugin {
         const { spinner } = this.cliInterface
         spinner.succeed('Deploying all functions. See logs for details')
         const { functions } = this.serverless.configurationInput
-        for (const func of Object.keys(functions)) {
+        Object.keys(functions).forEach(async func => {
             await this.spawnDeployFunction(func)
-        }
+        })
     }
 
     deployService() {
