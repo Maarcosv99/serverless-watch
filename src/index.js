@@ -1,8 +1,8 @@
-'use strict';
+'use strict'
 
 import { execFileSync } from 'node:child_process'
-import { watch } from 'chokidar';
-import ora from 'ora';
+import { watch } from 'chokidar'
+import ora from 'ora'
 
 const clear = () => execFileSync('clear', { stdio: 'inherit' })
 
@@ -55,7 +55,7 @@ class ServerlessWatchPlugin {
         const { functions } = this.serverless.configurationInput
         const { serviceDir } = this.serverless.config
         let handlerPath = functions[funcName].handler.split('.')[0]
-        return serviceDir + '/' + handlerPath 
+        return serviceDir + '/' + handlerPath
     }
 
     getFunctionByPath(path) {
@@ -128,7 +128,7 @@ class ServerlessWatchPlugin {
         spinner.color = 'yellow'
         spinner.start()
     }
-    
+
     async spawnDeployFunction(fn_to_deploy) {
         // Set cli options to deploy function
         this.cliOptions['force'] = true
